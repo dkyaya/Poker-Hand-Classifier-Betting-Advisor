@@ -2,6 +2,7 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import random
+import time
 from collections import Counter
 from tensorflow.keras.models import load_model
 from openai import OpenAI
@@ -89,6 +90,9 @@ for s_idx, suit in enumerate(suits):
             card = (s_idx, r_idx + 1)
             if card not in st.session_state.selected_cards and len(st.session_state.selected_cards) < 5:
                 st.session_state.selected_cards.append(card)
+                with st.spinner("Dealing card..."):
+                    time.sleep(0.25)
+                st.rerun()
 
 # Show current hand
 st.markdown("### 🃏 Selected Cards:")
@@ -104,6 +108,7 @@ if st.session_state.selected_cards:
             button_label = f"❌ {label}"
         if cols[i].button(button_label):
             st.session_state.selected_cards.remove(card)
+            st.rerun()
 else:
     st.info("Select up to 5 cards above.")
 
@@ -112,14 +117,16 @@ if st.button("Classify Hand"):
     unknown_count = 5 - len(known_cards)
 
     if unknown_count == 0:
+        placeholder = st.empty()
+        placeholder.info("🔄 Evaluating your hand...")
+        time.sleep(0.5)
         flat_hand = [val for card in known_cards for val in card]
         input_array = np.array([flat_hand])
         encoded_input = one_hot_encode_cards(input_array)
         prediction = model.predict(encoded_input, verbose=0)
         predicted_class = int(np.argmax(prediction))
         hand_type = class_labels[predicted_class]
-
-        st.success(f"🃏 Predicted Hand Type: **{hand_type}**")
+        placeholder.success(f"🃏 Predicted Hand Type: **{hand_type}**")
 
         with st.spinner("Asking a poker expert for betting advice..."):
             advice = get_betting_advice(hand_type)
@@ -127,6 +134,11 @@ if st.button("Classify Hand"):
 
     elif unknown_count < 5:
         st.warning(f"Only {5 - unknown_count} cards provided. Simulating {unknown_count} unknown cards...")
+        spinner = st.empty()
+        for i in range(6):
+            spinner.info(f"♠ ♦ ♣ ♥ Thinking{'.' * (i % 4)}")
+            time.sleep(0.15)
+
         all_possible_cards = [(s, r) for s in range(4) for r in range(1, 14)]
         used_cards = set(known_cards)
 
@@ -142,11 +154,12 @@ if st.button("Classify Hand"):
             predicted_class = int(np.argmax(prediction))
             predictions.append(predicted_class)
 
+        spinner.empty()
         counter = Counter(predictions)
         top_two = counter.most_common(2)
         hand_types = [class_labels[cls] for cls, _ in top_two]
 
-        st.success(f"🃏 Top Predictions: {hand_types[0]} and {hand_types[1]}")
+        st.markdown(f"### 🏆 Top Predictions: :orange[{hand_types[0]}] and :orange[{hand_types[1]}]")
 
         st.markdown("### 🔢 Simulation Breakdown:")
         total = sum(counter.values())
