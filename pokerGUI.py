@@ -78,20 +78,21 @@ if "selected_cards" not in st.session_state:
     st.session_state.selected_cards = []
 
 st.subheader("Card Selector")
+selected_set = set(st.session_state.selected_cards)
 for s_idx, suit in enumerate(suits):
     cols = st.columns(13)
     for r_idx, rank in enumerate(rank_labels):
+        card = (s_idx, r_idx + 1)
+        if card in selected_set:
+            continue  # Skip already selected cards
         label = f"{rank}{suit}"
         if suit_colors[suit] == "red":
             display_label = f":red[{label}]"
         else:
             display_label = label
         if cols[r_idx].button(display_label):
-            card = (s_idx, r_idx + 1)
-            if card not in st.session_state.selected_cards and len(st.session_state.selected_cards) < 5:
+            if len(st.session_state.selected_cards) < 5:
                 st.session_state.selected_cards.append(card)
-                with st.spinner("Dealing card..."):
-                    time.sleep(0.25)
                 st.rerun()
 
 # Show current hand
@@ -117,16 +118,14 @@ if st.button("Classify Hand"):
     unknown_count = 5 - len(known_cards)
 
     if unknown_count == 0:
-        placeholder = st.empty()
-        placeholder.info("🔄 Evaluating your hand...")
-        time.sleep(0.5)
         flat_hand = [val for card in known_cards for val in card]
         input_array = np.array([flat_hand])
         encoded_input = one_hot_encode_cards(input_array)
         prediction = model.predict(encoded_input, verbose=0)
         predicted_class = int(np.argmax(prediction))
         hand_type = class_labels[predicted_class]
-        placeholder.success(f"🃏 Predicted Hand Type: **{hand_type}**")
+
+        st.success(f"🃏 Predicted Hand Type: **{hand_type}**")
 
         with st.spinner("Asking a poker expert for betting advice..."):
             advice = get_betting_advice(hand_type)
