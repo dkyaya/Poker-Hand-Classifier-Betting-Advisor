@@ -3,20 +3,16 @@ import numpy as np
 import pandas as pd
 import random
 from collections import Counter
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Dropout
-from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.models import load_model
-from sklearn.model_selection import train_test_split
-import openai
+from openai import OpenAI
 
-# OpenAI API key setup
-openai.api_key = "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"
+# OpenAI client
+client = OpenAI(api_key=st.secrets["openai_api_key"])
 
 # Load and preprocess data
 @st.cache_resource
 def load_model_and_encoder():
-    model = load_model("/Users/yayaj/Desktop/Java - VSC/AI/FinalProj/Saved Things/pokerhandV7_syn.keras")
+    model = load_model("pokerhandV7_syn.keras")
 
     def one_hot_encode_cards(X_raw):
         N = X_raw.shape[0]
@@ -49,13 +45,16 @@ class_labels = {
     9: "Royal flush"
 }
 
+# Suit-specific styling for colors
+suit_colors = {"♥": "red", "♦": "red", "♠": "black", "♣": "black"}
+
 def get_betting_advice(hand_types):
     if isinstance(hand_types, list):
         prompt = f"You’re a poker expert. My hand likely falls into one of the following categories: {', '.join(hand_types)}. Give betting advice based on this uncertainty. Limit response to 4 bullet points."
     else:
         prompt = f"You’re a poker expert. I have a hand: {hand_types}. Give clear betting advice. Limit response to 4 bullet points."
 
-    response = openai.ChatCompletion.create(
+    response = client.chat.completions.create(
         model="gpt-4",
         messages=[
             {"role": "system", "content": "You are a concise poker expert giving betting advice."},
@@ -69,27 +68,45 @@ def get_betting_advice(hand_types):
 
 # ---- Streamlit UI ----
 st.title("🃏 Poker Hand Classifier & Betting Advisor")
-st.markdown("Input a poker hand one card at a time. You can mark a card as unknown.")
+st.markdown("Click to select up to 5 cards. You can remove them as needed.")
 
-suits = ["Hearts", "Spades", "Diamonds", "Clubs"]
-hand_input = []
+suits = ["♥", "♠", "♦", "♣"]
+rank_labels = ["A"] + [str(n) for n in range(2, 11)] + ["J", "Q", "K"]
 
-cols = st.columns(5)
-for i, col in enumerate(cols):
-    suit = col.selectbox(f"Card {i+1} Suit", options=["Unknown"] + suits, index=0)
-    rank = col.selectbox(f"Card {i+1} Rank", options=["Unknown"] + list(range(1, 14)), index=0)
+if "selected_cards" not in st.session_state:
+    st.session_state.selected_cards = []
 
-    if suit == "Unknown" or rank == "Unknown":
-        hand_input.extend([None, None])
-    else:
-        hand_input.extend([suits.index(suit), int(rank)])
+st.subheader("Card Selector")
+for s_idx, suit in enumerate(suits):
+    cols = st.columns(13)
+    for r_idx, rank in enumerate(rank_labels):
+        label = f"{rank}{suit}"
+        display_label = f":{suit_colors[suit]}[{label}]"
+        if cols[r_idx].button(display_label):
+            card = (s_idx, r_idx + 1)
+            if card not in st.session_state.selected_cards and len(st.session_state.selected_cards) < 5:
+                st.session_state.selected_cards.append(card)
+
+# Show current hand
+st.markdown("### 🃏 Selected Cards:")
+if st.session_state.selected_cards:
+    cols = st.columns(len(st.session_state.selected_cards))
+    for i, card in enumerate(st.session_state.selected_cards):
+        s, r = card
+        label = f"{rank_labels[r-1]}{suits[s]}"
+        color = suit_colors[suits[s]]
+        if cols[i].button(f"❌ :{color}[{label}]"):
+            st.session_state.selected_cards.remove(card)
+else:
+    st.info("Select up to 5 cards above.")
 
 if st.button("Classify Hand"):
-    known_cards = [(hand_input[i], hand_input[i+1]) for i in range(0, 10, 2) if hand_input[i] is not None and hand_input[i+1] is not None]
+    known_cards = st.session_state.selected_cards
     unknown_count = 5 - len(known_cards)
 
     if unknown_count == 0:
-        input_array = np.array([hand_input])
+        flat_hand = [val for card in known_cards for val in card]
+        input_array = np.array([flat_hand])
         encoded_input = one_hot_encode_cards(input_array)
         prediction = model.predict(encoded_input, verbose=0)
         predicted_class = int(np.argmax(prediction))
@@ -100,6 +117,7 @@ if st.button("Classify Hand"):
         with st.spinner("Asking a poker expert for betting advice..."):
             advice = get_betting_advice(hand_type)
         st.info(f"💡 **AI Betting Advice:** {advice}")
+
     elif unknown_count < 5:
         st.warning(f"Only {5 - unknown_count} cards provided. Simulating {unknown_count} unknown cards...")
         all_possible_cards = [(s, r) for s in range(4) for r in range(1, 14)]
@@ -129,48 +147,10 @@ if st.button("Classify Hand"):
             percent = (count / total) * 100
             st.write(f"- {class_labels[cls]}: {percent:.2f}%")
 
-        total_percent = sum((count / total) * 100 for count in counter.values())
-        st.caption(f"🔢 Total: {total_percent:.2f}%")
+        st.caption(f"🔢 Total: {sum((count / total) * 100 for count in counter.values()):.2f}%")
 
         with st.spinner("Asking a poker expert for betting advice..."):
             advice = get_betting_advice(hand_types)
         st.info(f"💡 **AI Betting Advice:** {advice}")
     else:
-        st.error("Please provide at least one known card to simulate the rest.")
-
-def test_model_on_known_hands(model, one_hot_encode_fn, class_labels):
-    import numpy as np
-
-    test_hands = {
-        0: [0, 2, 1, 5, 2, 8, 3, 11, 0, 13],
-        1: [0, 2, 1, 2, 2, 5, 3, 7, 0, 9],
-        2: [0, 4, 1, 4, 2, 9, 3, 9, 0, 11],
-        3: [0, 6, 1, 6, 2, 6, 3, 10, 0, 11],
-        4: [0, 3, 1, 4, 2, 5, 3, 6, 0, 7],
-        5: [0, 2, 0, 5, 0, 9, 0, 11, 0, 13],
-        6: [0, 7, 1, 7, 2, 7, 0, 10, 1, 10],
-        7: [0, 9, 1, 9, 2, 9, 3, 9, 0, 2],
-        8: [1, 5, 1, 6, 1, 7, 1, 8, 1, 9],
-        9: [0,10, 0,11, 0,12, 0,13, 0, 1]
-    }
-
-    correct = 0
-
-    print("\n🧪 Model Evaluation on Known Hands:")
-    for true_class, hand in test_hands.items():
-        hand_array = np.array([hand])
-        encoded = one_hot_encode_fn(hand_array)
-        prediction = model.predict(encoded, verbose=0)
-        predicted_class = np.argmax(prediction)
-
-        hand_name = class_labels[true_class]
-        predicted_name = class_labels[predicted_class]
-        status = "✅" if predicted_class == true_class else "❌"
-        if status == "✅":
-            correct += 1
-
-        print(f"{status} Expected: {true_class} ({hand_name}), Predicted: {predicted_class} ({predicted_name})")
-
-    print(f"\n🏁 Accuracy on known test hands: {correct}/10 ({correct * 10:.1f}%)")
-
-test_model_on_known_hands(model, one_hot_encode_cards, class_labels)
+        st.error("Please select at least one known card to simulate the rest.")
