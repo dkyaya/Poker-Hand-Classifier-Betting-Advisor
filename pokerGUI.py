@@ -45,6 +45,9 @@ class_labels = {
     9: "Royal flush"
 }
 
+# Suit-specific styling for colors
+suit_colors = {"♥": "red", "♦": "red", "♠": "black", "♣": "black"}
+
 def get_betting_advice(hand_types):
     if isinstance(hand_types, list):
         prompt = f"You’re a poker expert. My hand likely falls into one of the following categories: {', '.join(hand_types)}. Give betting advice based on this uncertainty. Limit response to 4 bullet points."
@@ -78,7 +81,8 @@ for s_idx, suit in enumerate(suits):
     cols = st.columns(13)
     for r_idx, rank in enumerate(rank_labels):
         label = f"{rank}{suit}"
-        if cols[r_idx].button(label):
+        display_label = f":{suit_colors[suit]}[{label}]"
+        if cols[r_idx].button(display_label):
             card = (s_idx, r_idx + 1)
             if card not in st.session_state.selected_cards and len(st.session_state.selected_cards) < 5:
                 st.session_state.selected_cards.append(card)
@@ -90,7 +94,8 @@ if st.session_state.selected_cards:
     for i, card in enumerate(st.session_state.selected_cards):
         s, r = card
         label = f"{rank_labels[r-1]}{suits[s]}"
-        if cols[i].button(f"❌ {label}"):
+        color = suit_colors[suits[s]]
+        if cols[i].button(f"❌ :{color}[{label}]"):
             st.session_state.selected_cards.remove(card)
 else:
     st.info("Select up to 5 cards above.")
