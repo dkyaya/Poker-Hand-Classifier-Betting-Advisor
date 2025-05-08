@@ -83,7 +83,10 @@ for s_idx, suit in enumerate(suits):
     for r_idx, rank in enumerate(rank_labels):
         card = (s_idx, r_idx + 1)
         if card not in st.session_state.selected_cards:
-            label = f"<span style='color:{suit_colors[suit]}; font-weight:bold'>{rank}{suit}</span>"
+            if suit in ["♥", "♦"]:
+                label = f"<span style='color:red; font-weight:bold'>{rank}{suit}</span>"
+            else:
+                label = f"<span style='color:black; font-weight:bold'>{rank}{suit}</span>"
             if cols[r_idx].button(f"{rank}{suit}"):
                 if len(st.session_state.selected_cards) < 5:
                     st.session_state.selected_cards.append(card)
@@ -95,10 +98,12 @@ if st.session_state.selected_cards:
     for i, card in enumerate(st.session_state.selected_cards):
         s, r = card
         label = f"{rank_labels[r-1]}{suits[s]}"
-        color = suit_colors[suits[s]]
+        color = "red" if suits[s] in ["♥", "♦"] else "black"
         html = f"<span style='color:{color}; font-weight:bold'>{label}</span>"
         if cols[i].button(f"❌ {label}"):
             st.session_state.selected_cards.remove(card)
+    if st.button("🧹 Clear Hand"):
+        st.session_state.selected_cards.clear()
 else:
     st.info("Select up to 5 cards above.")
 
