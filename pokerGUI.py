@@ -53,7 +53,7 @@ def get_betting_advice(hand_types):
     if isinstance(hand_types, list):
         prompt = f"You’re a poker expert. My hand likely falls into one of the following categories: {', '.join(hand_types)}. Give betting advice based on this uncertainty. Limit response to 4 bullet points."
     else:
-        prompt = f"You’re a poker expert. I have a hand: {hand_types}. Give clear betting advice. Limit response to 4 bullet points."
+        prompt = f"You’re a poker expert. I have a hand: {hand_types}. Give clear betting advice."
 
     response = client.chat.completions.create(
         model="gpt-4",
