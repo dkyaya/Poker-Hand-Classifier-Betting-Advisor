@@ -71,109 +71,118 @@ def get_betting_advice(hand_types):
 st.title("🃏 Poker Hand Classifier & Betting Advisor")
 st.markdown("Click to select up to 5 cards. You can remove them as needed.")
 
+left_col, right_col = st.columns([3, 1])
+
+with right_col:
+    st.markdown("### 🔢 Hand Rankings")
+    hand_strength = list(class_labels.items())[::-1]
+    for i, (k, v) in enumerate(hand_strength):
+        st.markdown(f"**{10 - i}.** {v}")
+
 suits = ["♥", "♠", "♦", "♣"]
 rank_labels = ["A"] + [str(n) for n in range(2, 11)] + ["J", "Q", "K"]
 
 if "selected_cards" not in st.session_state:
     st.session_state.selected_cards = []
 
-st.subheader("Card Selector")
-selected_set = set(st.session_state.selected_cards)
-for s_idx, suit in enumerate(suits):
-    cols = st.columns(13)
-    for r_idx, rank in enumerate(rank_labels):
-        card = (s_idx, r_idx + 1)
-        if card in selected_set:
-            continue  # Skip already selected cards
-        label = f"{rank}{suit}"
-        if suit_colors[suit] == "red":
-            display_label = f":red[{label}]"
-        else:
-            display_label = label
-        if cols[r_idx].button(display_label):
-            if len(st.session_state.selected_cards) < 5:
-                st.session_state.selected_cards.append(card)
+with left_col:
+    st.subheader("Card Selector")
+    selected_set = set(st.session_state.selected_cards)
+    for s_idx, suit in enumerate(suits):
+        cols = st.columns(13)
+        for r_idx, rank in enumerate(rank_labels):
+            card = (s_idx, r_idx + 1)
+            if card in selected_set:
+                continue  # Skip already selected cards
+            label = f"{rank}{suit}"
+            if suit_colors[suit] == "red":
+                display_label = f":red[{label}]"
+            else:
+                display_label = label
+            if cols[r_idx].button(display_label):
+                if len(st.session_state.selected_cards) < 5:
+                    st.session_state.selected_cards.append(card)
+                    st.rerun()
+
+    # Show current hand
+    st.markdown("### 🃏 Selected Cards:")
+    if st.session_state.selected_cards:
+        cols = st.columns(len(st.session_state.selected_cards))
+        for i, card in enumerate(st.session_state.selected_cards):
+            s, r = card
+            label = f"{rank_labels[r-1]}{suits[s]}"
+            color = suit_colors[suits[s]]
+            if color == "red":
+                button_label = f"❌ :red[{label}]"
+            else:
+                button_label = f"❌ {label}"
+            if cols[i].button(button_label):
+                st.session_state.selected_cards.remove(card)
                 st.rerun()
 
-# Show current hand
-st.markdown("### 🃏 Selected Cards:")
-if st.session_state.selected_cards:
-    cols = st.columns(len(st.session_state.selected_cards))
-    for i, card in enumerate(st.session_state.selected_cards):
-        s, r = card
-        label = f"{rank_labels[r-1]}{suits[s]}"
-        color = suit_colors[suits[s]]
-        if color == "red":
-            button_label = f"❌ :red[{label}]"
-        else:
-            button_label = f"❌ {label}"
-        if cols[i].button(button_label):
-            st.session_state.selected_cards.remove(card)
+        if st.button("🧹 Clear Hand"):
+            st.session_state.selected_cards.clear()
             st.rerun()
+    else:
+        st.info("Select up to 5 cards above.")
 
-    if st.button("🧹 Clear Hand"):
-        st.session_state.selected_cards.clear()
-        st.rerun()
-else:
-    st.info("Select up to 5 cards above.")
+    if st.button("Classify Hand"):
+        known_cards = st.session_state.selected_cards
+        unknown_count = 5 - len(known_cards)
 
-if st.button("Classify Hand"):
-    known_cards = st.session_state.selected_cards
-    unknown_count = 5 - len(known_cards)
-
-    if unknown_count == 0:
-        flat_hand = [val for card in known_cards for val in card]
-        input_array = np.array([flat_hand])
-        encoded_input = one_hot_encode_cards(input_array)
-        prediction = model.predict(encoded_input, verbose=0)
-        predicted_class = int(np.argmax(prediction))
-        hand_type = class_labels[predicted_class]
-
-        st.success(f"🃏 Predicted Hand Type: **{hand_type}**")
-
-        with st.spinner("Asking a poker expert for betting advice..."):
-            advice = get_betting_advice(hand_type)
-        st.info(f"💡 **AI Betting Advice:** {advice}")
-
-    elif unknown_count < 5:
-        st.warning(f"Only {5 - unknown_count} cards provided. Simulating {unknown_count} unknown cards...")
-        spinner = st.empty()
-        for i in range(6):
-            spinner.info(f"♠ ♦ ♣ ♥ Thinking{'.' * (i % 4)}")
-            time.sleep(0.15)
-
-        all_possible_cards = [(s, r) for s in range(4) for r in range(1, 14)]
-        used_cards = set(known_cards)
-
-        predictions = []
-        for _ in range(100):
-            sampled_hand = known_cards.copy()
-            remaining = random.sample([c for c in all_possible_cards if c not in used_cards], unknown_count)
-            full_hand = sampled_hand + remaining
-            flat_hand = [val for card in full_hand for val in card]
+        if unknown_count == 0:
+            flat_hand = [val for card in known_cards for val in card]
             input_array = np.array([flat_hand])
             encoded_input = one_hot_encode_cards(input_array)
             prediction = model.predict(encoded_input, verbose=0)
             predicted_class = int(np.argmax(prediction))
-            predictions.append(predicted_class)
+            hand_type = class_labels[predicted_class]
 
-        spinner.empty()
-        counter = Counter(predictions)
-        top_two = counter.most_common(2)
-        hand_types = [class_labels[cls] for cls, _ in top_two]
+            st.success(f"🃏 Predicted Hand Type: **{hand_type}**")
 
-        st.markdown(f"### 🏆 Top Predictions: :orange[{hand_types[0]}] and :orange[{hand_types[1]}]")
+            with st.spinner("Asking a poker expert for betting advice..."):
+                advice = get_betting_advice(hand_type)
+            st.info(f"💡 **AI Betting Advice:** {advice}")
 
-        st.markdown("### 🔢 Simulation Breakdown:")
-        total = sum(counter.values())
-        for cls, count in counter.most_common():
-            percent = (count / total) * 100
-            st.write(f"- {class_labels[cls]}: {percent:.2f}%")
+        elif unknown_count < 5:
+            st.warning(f"Only {5 - unknown_count} cards provided. Simulating {unknown_count} unknown cards...")
+            spinner = st.empty()
+            for i in range(6):
+                spinner.info(f"♠ ♦ ♣ ♥ Thinking{'.' * (i % 4)}")
+                time.sleep(0.15)
 
-        st.caption(f"🔢 Total: {sum((count / total) * 100 for count in counter.values()):.2f}%")
+            all_possible_cards = [(s, r) for s in range(4) for r in range(1, 14)]
+            used_cards = set(known_cards)
 
-        with st.spinner("Asking a poker expert for betting advice..."):
-            advice = get_betting_advice(hand_types)
-        st.info(f"💡 **AI Betting Advice:** {advice}")
-    else:
-        st.error("Please select at least one known card to simulate the rest.")
+            predictions = []
+            for _ in range(100):
+                sampled_hand = known_cards.copy()
+                remaining = random.sample([c for c in all_possible_cards if c not in used_cards], unknown_count)
+                full_hand = sampled_hand + remaining
+                flat_hand = [val for card in full_hand for val in card]
+                input_array = np.array([flat_hand])
+                encoded_input = one_hot_encode_cards(input_array)
+                prediction = model.predict(encoded_input, verbose=0)
+                predicted_class = int(np.argmax(prediction))
+                predictions.append(predicted_class)
+
+            spinner.empty()
+            counter = Counter(predictions)
+            top_two = counter.most_common(2)
+            hand_types = [class_labels[cls] for cls, _ in top_two]
+
+            st.markdown(f"### 🏆 Top Predictions: :orange[{hand_types[0]}] and :orange[{hand_types[1]}]")
+
+            st.markdown("### 🔢 Simulation Breakdown:")
+            total = sum(counter.values())
+            for cls, count in counter.most_common():
+                percent = (count / total) * 100
+                st.write(f"- {class_labels[cls]}: {percent:.2f}%")
+
+            st.caption(f"🔢 Total: {sum((count / total) * 100 for count in counter.values()):.2f}%")
+
+            with st.spinner("Asking a poker expert for betting advice..."):
+                advice = get_betting_advice(hand_types)
+            st.info(f"💡 **AI Betting Advice:** {advice}")
+        else:
+            st.error("Please select at least one known card to simulate the rest.")
