@@ -17,7 +17,7 @@ client = OpenAI(api_key="sk-proj-pjoowMyggqyYcj4fIYN8B4s1THRlt4UVKE6H43z9XIecIND
 # Load and preprocess data
 @st.cache_resource
 def load_model_and_encoder():
-    model = load_model("/Users/yayaj/Desktop/Java - VSC/AI/FinalProj/Saved Things/pokerhandV7_syn.keras")
+    model = load_model("pokerhandV7_syn.keras")
 
     def one_hot_encode_cards(X_raw):
         N = X_raw.shape[0]
