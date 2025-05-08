@@ -110,6 +110,10 @@ if st.session_state.selected_cards:
         if cols[i].button(button_label):
             st.session_state.selected_cards.remove(card)
             st.rerun()
+
+    if st.button("🧹 Clear Hand"):
+        st.session_state.selected_cards.clear()
+        st.rerun()
 else:
     st.info("Select up to 5 cards above.")
 
