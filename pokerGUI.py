@@ -10,8 +10,8 @@ from tensorflow.keras.models import load_model
 from sklearn.model_selection import train_test_split
 from openai import OpenAI
 
-import openai
-openai.api_key = "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"  # replace with your real key
+client = OpenAI(api_key="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")
+
 
 # OpenAI API key setup
 
@@ -57,15 +57,13 @@ def get_betting_advice(hand_types):
     else:
         prompt = f"You’re a poker expert. I have a hand: {hand_types}. Give clear betting advice. Limit response to 4 bullet points."
 
-    response = openai.ChatCompletion.create(
-        model="gpt-4",
-        messages=[
-            {"role": "system", "content": "You are a concise poker expert giving betting advice."},
-            {"role": "user", "content": prompt}
-        ],
-        max_tokens=300,
-        temperature=0.7
-    )
+    response = client.chat.completions.create(model="gpt-4",
+    messages=[
+        {"role": "system", "content": "You are a concise poker expert giving betting advice."},
+        {"role": "user", "content": prompt}
+    ],
+    max_tokens=300,
+    temperature=0.7)
 
     return response.choices[0].message.content.strip()
 
