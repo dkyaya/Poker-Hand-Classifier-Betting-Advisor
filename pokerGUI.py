@@ -78,20 +78,15 @@ if "selected_cards" not in st.session_state:
     st.session_state.selected_cards = []
 
 st.subheader("Card Selector")
-container = st.container()
-
-with container:
-    for s_idx, suit in enumerate(suits):
-        for row_start in range(0, 13, 4):
-            row_end = min(row_start + 4, 13)
-            row_cols = st.columns(row_end - row_start)
-            for i, r_idx in enumerate(range(row_start, row_end)):
-                card = (s_idx, r_idx + 1)
-                if card not in st.session_state.selected_cards:
-                    label = f"{rank_labels[r_idx]}{suit}"
-                    if row_cols[i].button(label):
-                        if len(st.session_state.selected_cards) < 5:
-                            st.session_state.selected_cards.append(card)
+for s_idx, suit in enumerate(suits):
+    cols = st.columns(13)
+    for r_idx, rank in enumerate(rank_labels):
+        card = (s_idx, r_idx + 1)
+        if card not in st.session_state.selected_cards:
+            label = f"<span style='color:{suit_colors[suit]}; font-weight:bold'>{rank}{suit}</span>"
+            if cols[r_idx].button(f"{rank}{suit}"):
+                if len(st.session_state.selected_cards) < 5:
+                    st.session_state.selected_cards.append(card)
 
 # Show current hand
 st.markdown("### 🃏 Selected Cards:")
@@ -100,6 +95,8 @@ if st.session_state.selected_cards:
     for i, card in enumerate(st.session_state.selected_cards):
         s, r = card
         label = f"{rank_labels[r-1]}{suits[s]}"
+        color = suit_colors[suits[s]]
+        html = f"<span style='color:{color}; font-weight:bold'>{label}</span>"
         if cols[i].button(f"❌ {label}"):
             st.session_state.selected_cards.remove(card)
 else:
