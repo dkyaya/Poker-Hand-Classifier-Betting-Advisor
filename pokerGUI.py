@@ -71,13 +71,15 @@ def get_betting_advice(hand_types):
 st.title("🃏 Poker Hand Classifier & Betting Advisor")
 st.markdown("Click to select up to 5 cards. You can remove them as needed.")
 
-left_col, right_col = st.columns([3, 1])
+left_col, _, right_col = st.columns([3, 0.3, 1.5])
 
 with right_col:
     st.markdown("### 🔢 Hand Rankings")
     hand_strength = list(class_labels.items())[::-1]
+    st.markdown("<div style='background-color:#f9f9f9;padding:12px;border-radius:10px;'>", unsafe_allow_html=True)
     for i, (k, v) in enumerate(hand_strength):
-        st.markdown(f"**{10 - i}.** {v}")
+        st.markdown(f"<div style='padding:2px 0;'><b>{10 - i}.</b> {v}</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 suits = ["♥", "♠", "♦", "♣"]
 rank_labels = ["A"] + [str(n) for n in range(2, 11)] + ["J", "Q", "K"]
