@@ -10,7 +10,7 @@ from tensorflow.keras.models import load_model
 from sklearn.model_selection import train_test_split
 from openai import OpenAI
 
-client = OpenAI(api_key="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")
+client = OpenAI(api_key=st.secrets["openai_api_key"])
 
 # OpenAI API key setup
 
