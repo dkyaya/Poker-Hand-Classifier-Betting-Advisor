@@ -46,7 +46,7 @@ class_labels = {
 }
 
 # Suit-specific styling for colors
-suit_colors = {"♥": "red", "♦": "red", "♠": "black", "♣": "black"}
+suit_colors = {"♥": "red", "♦": "red", "♠": "default", "♣": "default"}
 
 def get_betting_advice(hand_types):
     if isinstance(hand_types, list):
@@ -81,7 +81,10 @@ for s_idx, suit in enumerate(suits):
     cols = st.columns(13)
     for r_idx, rank in enumerate(rank_labels):
         label = f"{rank}{suit}"
-        display_label = f":{suit_colors[suit]}[{label}]"
+        if suit_colors[suit] == "red":
+            display_label = f":red[{label}]"
+        else:
+            display_label = label
         if cols[r_idx].button(display_label):
             card = (s_idx, r_idx + 1)
             if card not in st.session_state.selected_cards and len(st.session_state.selected_cards) < 5:
@@ -95,7 +98,11 @@ if st.session_state.selected_cards:
         s, r = card
         label = f"{rank_labels[r-1]}{suits[s]}"
         color = suit_colors[suits[s]]
-        if cols[i].button(f"❌ :{color}[{label}]"):
+        if color == "red":
+            button_label = f"❌ :red[{label}]"
+        else:
+            button_label = f"❌ {label}"
+        if cols[i].button(button_label):
             st.session_state.selected_cards.remove(card)
 else:
     st.info("Select up to 5 cards above.")
