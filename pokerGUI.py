@@ -45,9 +45,45 @@ class_labels = {
     9: "Royal flush"
 }
 
-# Suit-specific styling for colors
-suit_colors = {"♥": "red", "♦": "red", "♠": "black", "♣": "black"}
+suits = ["♥", "♠", "♦", "♣"]
+rank_labels = ["A"] + [str(n) for n in range(2, 11)] + ["J", "Q", "K"]
 
+st.title("🃏 Poker Hand Classifier & Betting Advisor")
+st.markdown("Click to select up to 5 cards. You can remove them as needed.")
+
+if "selected_cards" not in st.session_state:
+    st.session_state.selected_cards = []
+
+st.subheader("Card Selector")
+for s_idx, suit in enumerate(suits):
+    for row_start in range(0, 13, 4):
+        row_end = min(row_start + 4, 13)
+        row_cols = st.columns(row_end - row_start)
+        for i, r_idx in enumerate(range(row_start, row_end)):
+            card = (s_idx, r_idx + 1)
+            if card not in st.session_state.selected_cards:
+                label = f"{rank_labels[r_idx]}{suit}"
+                if row_cols[i].button(label, key=f"{label}"):
+                    if len(st.session_state.selected_cards) < 5:
+                        st.session_state.selected_cards.append(card)
+
+# Show current hand
+st.markdown("### 🃏 Selected Cards:")
+if st.session_state.selected_cards:
+    cols = st.columns(len(st.session_state.selected_cards))
+    for i, card in enumerate(st.session_state.selected_cards):
+        s, r = card
+        label = f"{rank_labels[r-1]}{suits[s]}"
+        cols[i].write(label)
+        if cols[i].button(f"❌", key=f"remove_{i}"):
+            st.session_state.selected_cards.pop(i)
+            st.experimental_rerun()
+
+    if st.button("🧹 Clear Hand"):
+        st.session_state.selected_cards.clear()
+        st.experimental_rerun()
+else:
+    st.info("Select up to 5 cards above.")
 
 def get_betting_advice(hand_types):
     if isinstance(hand_types, list):
@@ -66,46 +102,6 @@ def get_betting_advice(hand_types):
     )
 
     return response.choices[0].message.content.strip()
-
-# ---- Streamlit UI ----
-st.title("🃏 Poker Hand Classifier & Betting Advisor")
-st.markdown("Click to select up to 5 cards. You can remove them as needed.")
-
-suits = ["♥", "♠", "♦", "♣"]
-rank_labels = ["A"] + [str(n) for n in range(2, 11)] + ["J", "Q", "K"]
-
-if "selected_cards" not in st.session_state:
-    st.session_state.selected_cards = []
-
-st.subheader("Card Selector")
-for s_idx, suit in enumerate(suits):
-    cols = st.columns(13)
-    for r_idx, rank in enumerate(rank_labels):
-        card = (s_idx, r_idx + 1)
-        if card not in st.session_state.selected_cards:
-            if suit in ["♥", "♦"]:
-                label = f"<span style='color:red; font-weight:bold'>{rank}{suit}</span>"
-            else:
-                label = f"<span style='color:black; font-weight:bold'>{rank}{suit}</span>"
-            if cols[r_idx].button(f"{rank}{suit}"):
-                if len(st.session_state.selected_cards) < 5:
-                    st.session_state.selected_cards.append(card)
-
-# Show current hand
-st.markdown("### 🃏 Selected Cards:")
-if st.session_state.selected_cards:
-    cols = st.columns(len(st.session_state.selected_cards))
-    for i, card in enumerate(st.session_state.selected_cards):
-        s, r = card
-        label = f"{rank_labels[r-1]}{suits[s]}"
-        color = "red" if suits[s] in ["♥", "♦"] else "black"
-        html = f"<span style='color:{color}; font-weight:bold'>{label}</span>"
-        if cols[i].button(f"❌ {label}"):
-            st.session_state.selected_cards.remove(card)
-    if st.button("🧹 Clear Hand"):
-        st.session_state.selected_cards.clear()
-else:
-    st.info("Select up to 5 cards above.")
 
 if st.button("Classify Hand"):
     known_cards = st.session_state.selected_cards
