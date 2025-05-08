@@ -73,19 +73,24 @@ st.markdown("Click to select up to 5 cards. You can remove them as needed.")
 
 left_col, _, right_col = st.columns([3, 0.3, 1.5])
 
-with right_col:
-    st.markdown("### 🔢 Hand Rankings")
-    hand_strength = list(class_labels.items())[::-1]
-    st.markdown("<div style='background-color:#f9f9f9;padding:12px;border-radius:10px;'>", unsafe_allow_html=True)
-    for i, (k, v) in enumerate(hand_strength):
-        st.markdown(f"<div style='padding:2px 0;'><b>{10 - i}.</b> {v}</div>", unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
+predicted_class = None
 
 suits = ["♥", "♠", "♦", "♣"]
 rank_labels = ["A"] + [str(n) for n in range(2, 11)] + ["J", "Q", "K"]
 
 if "selected_cards" not in st.session_state:
     st.session_state.selected_cards = []
+
+with right_col:
+    st.markdown("### 🔢 Hand Rankings")
+    hand_strength = list(class_labels.items())[::-1]
+    st.markdown("<div style='background-color:#f9f9f9;padding:12px;border-radius:10px;'>", unsafe_allow_html=True)
+    for i, (k, v) in enumerate(hand_strength):
+        if predicted_class is not None and k == predicted_class:
+            st.markdown(f"<div style='padding:2px 0; background-color:#ffe599; border-radius:5px;'><b>{10 - i}.</b> {v}</div>", unsafe_allow_html=True)
+        else:
+            st.markdown(f"<div style='padding:2px 0;'><b>{10 - i}.</b> {v}</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 with left_col:
     st.subheader("Card Selector")
@@ -140,6 +145,7 @@ with left_col:
             predicted_class = int(np.argmax(prediction))
             hand_type = class_labels[predicted_class]
 
+            st.session_state.predicted_class = predicted_class
             st.success(f"🃏 Predicted Hand Type: **{hand_type}**")
 
             with st.spinner("Asking a poker expert for betting advice..."):
